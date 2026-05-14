@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: orchestration-scheduler-test
+  flyway:
+    enabled: false
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  jackson:
+    default-property-inclusion: always
+
+scheduler:
+  tick-interval-ms: 600000
