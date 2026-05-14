@@ -98,6 +98,7 @@ class SchedulerIntegrationTest {
 			.andExpect(jsonPath("$.jobType").value("COLLECTION_BATCH"))
 			.andExpect(jsonPath("$.nextRun").value(nullValue()))
 			.andExpect(jsonPath("$.cronExpression").value(nullValue()))
+			.andExpect(jsonPath("$.previousRun").value(nullValue()))
 	}
 
 	@Test
@@ -115,5 +116,6 @@ class SchedulerIntegrationTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.cronExpression").value("0 0 * * *"))
 			.andExpect(jsonPath("$.nextRun").exists())
+			.andExpect(jsonPath("$.previousRun").value(nullValue()))
 	}
 }

@@ -32,11 +32,13 @@ class SchedulerCacheInitializer(
 		if (r == null) {
 			cache.remove(jobType)
 		} else {
+			val previousRun = cache.get(jobType)?.previousRun
 			cache.put(
 				SchedulerCache.Row(
 					jobType = r.jobType,
 					nextRun = r.nextRun,
 					cronExpression = r.cronExpression,
+					previousRun = previousRun,
 				),
 			)
 		}

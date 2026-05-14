@@ -2,6 +2,7 @@ package ru.sadovskie.leo.app.joposcragent.schedulersvc.service
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCache
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCacheInitializer
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cron.CronNextRunCalculator
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.domain.JobTypeHelper
@@ -17,6 +18,7 @@ class SchedulerSettingsService(
 	private val repository: SchedulerRepository,
 	private val cronCalculator: CronNextRunCalculator,
 	private val cacheInitializer: SchedulerCacheInitializer,
+	private val cache: SchedulerCache,
 	private val clock: Clock,
 ) {
 	private val defaultCron = "0 * * * *"
@@ -24,17 +26,20 @@ class SchedulerSettingsService(
 	fun getSettings(jobTypeQuery: String?): SchedulerSettings {
 		val code = JobTypeHelper.resolveJobTypeCode(jobTypeQuery)
 		val row = repository.findByJobType(code)
+		val previousRun = cache.get(code)?.previousRun
 		return if (row == null) {
 			SchedulerSettings(
 				jobType = JobTypeHelper.toOpenApi(code),
 				nextRun = null,
 				cronExpression = null,
+				previousRun = previousRun,
 			)
 		} else {
 			SchedulerSettings(
 				jobType = JobTypeHelper.toOpenApi(row.jobType),
 				nextRun = row.nextRun,
 				cronExpression = row.cronExpression,
+				previousRun = previousRun,
 			)
 		}
 	}

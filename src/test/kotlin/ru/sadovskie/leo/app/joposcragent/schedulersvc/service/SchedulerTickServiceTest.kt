@@ -3,6 +3,8 @@ package ru.sadovskie.leo.app.joposcragent.schedulersvc.service
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCache
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cron.CronNextRunCalculator
@@ -48,6 +50,7 @@ class SchedulerTickServiceTest {
 		service.tick()
 		verify(exactly = 0) { repository.updateNextRun(any(), any()) }
 		verify(exactly = 0) { publisher.publishCollectionBatchBegin(any()) }
+		assertNull(cache.get(JobTypeHelper.COLLECTION_BATCH)?.previousRun)
 	}
 
 	@Test
@@ -67,6 +70,7 @@ class SchedulerTickServiceTest {
 
 		verify(exactly = 0) { publisher.publishCollectionBatchBegin(any()) }
 		verify { repository.updateNextRun(JobTypeHelper.RETENTION, advanced) }
+		assertEquals(OffsetDateTime.parse("2026-01-15T10:00:00Z"), cache.get(JobTypeHelper.RETENTION)?.previousRun)
 	}
 
 	@Test
@@ -86,5 +90,6 @@ class SchedulerTickServiceTest {
 
 		verify { publisher.publishCollectionBatchBegin(any()) }
 		verify { repository.updateNextRun(JobTypeHelper.COLLECTION_BATCH, advanced) }
+		assertEquals(OffsetDateTime.parse("2026-01-15T10:00:00Z"), cache.get(JobTypeHelper.COLLECTION_BATCH)?.previousRun)
 	}
 }

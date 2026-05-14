@@ -10,9 +10,12 @@ class SchedulerCache {
 		val jobType: String,
 		val nextRun: OffsetDateTime,
 		val cronExpression: String,
+		val previousRun: OffsetDateTime? = null,
 	)
 
 	private val rowsByJobType = ConcurrentHashMap<String, Row>()
+
+	fun get(jobType: String): Row? = rowsByJobType[jobType]
 
 	fun replaceAll(rows: Collection<Row>) {
 		rowsByJobType.clear()

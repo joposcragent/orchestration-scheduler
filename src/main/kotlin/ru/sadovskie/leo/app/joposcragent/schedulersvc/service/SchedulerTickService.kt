@@ -61,7 +61,14 @@ class SchedulerTickService(
 			launch(Dispatchers.IO) {
 				try {
 					val newNext = cronCalculator.nextAfter(now, row.cronExpression)
-					cache.put(SchedulerCache.Row(jobType, newNext, row.cronExpression))
+					cache.put(
+						SchedulerCache.Row(
+							jobType = jobType,
+							nextRun = newNext,
+							cronExpression = row.cronExpression,
+							previousRun = now,
+						),
+					)
 					repository.updateNextRun(jobType, newNext)
 				} catch (e: Exception) {
 					log.error("Failed to persist next_run for jobType={}", jobType, e)
