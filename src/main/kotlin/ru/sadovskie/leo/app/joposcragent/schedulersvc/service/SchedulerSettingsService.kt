@@ -1,5 +1,6 @@
 package ru.sadovskie.leo.app.joposcragent.schedulersvc.service
 
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCache
@@ -21,6 +22,7 @@ class SchedulerSettingsService(
 	private val cache: SchedulerCache,
 	private val clock: Clock,
 ) {
+	private val log = LoggerFactory.getLogger(javaClass)
 	private val defaultCron = "0 * * * *"
 
 	fun getSettings(jobTypeQuery: String?): SchedulerSettings {
@@ -53,10 +55,13 @@ class SchedulerSettingsService(
 		if (existing == null) {
 			val nextRun = cronCalculator.nextAfter(now, body.value)
 			repository.insert(code, body.value, nextRun)
+			log.info("updateCronExpression: inserted new row jobType={} nextRun={}", code, nextRun)
 		} else {
 			repository.updateCronExpression(code, body.value)
+			log.info("updateCronExpression: updated cron jobType={}", code)
 		}
 		cacheInitializer.refreshJobType(code)
+		log.info("updateCronExpression: cache refreshed jobType={}", code)
 	}
 
 	@Transactional
@@ -65,9 +70,12 @@ class SchedulerSettingsService(
 		val existing = repository.findByJobType(code)
 		if (existing == null) {
 			repository.insert(code, defaultCron, body.value)
+			log.info("updateNextRun: inserted new row jobType={} nextRun={}", code, body.value)
 		} else {
 			repository.updateNextRun(code, body.value)
+			log.info("updateNextRun: updated next_run jobType={} nextRun={}", code, body.value)
 		}
 		cacheInitializer.refreshJobType(code)
+		log.info("updateNextRun: cache refreshed jobType={}", code)
 	}
 }
