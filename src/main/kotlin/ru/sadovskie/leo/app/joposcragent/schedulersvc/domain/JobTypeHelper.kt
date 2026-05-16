@@ -6,6 +6,12 @@ object JobTypeHelper {
 	const val COLLECTION_BATCH = "COLLECTION_BATCH"
 	const val RETENTION = "RETENTION"
 
+	/**
+	 * Все известные коды `job_type` в порядке, совпадающем с `orchestration.scheduler_jobs` в БД.
+	 * Используется для типобезопасного построения источника строк в jOOQ без сырого SQL.
+	 */
+	val allJobTypeCodesInDbOrder: List<String> = listOf(COLLECTION_BATCH, RETENTION)
+
 	private val allowed = setOf(COLLECTION_BATCH, RETENTION)
 
 	fun resolveJobTypeCode(jobTypeQuery: String?): String {
