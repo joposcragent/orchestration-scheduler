@@ -10,9 +10,11 @@ import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCache
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCacheInitializer
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cron.CronNextRunCalculator
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.jooq.tables.records.SchedulerRecord
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerJobType
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateCronExpression
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateNextRun
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence.SchedulerRepository
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence.SchedulerSettingsListDbRow
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -94,5 +96,35 @@ class SchedulerSettingsServiceTest {
 		val settings = service.getSettings(null)
 
 		assertNull(settings.previousRun)
+	}
+
+	@Test
+	fun `get settings list merges previousRun from cache`() {
+		val next = OffsetDateTime.parse("2026-01-15T09:00:00Z")
+		every { repository.fetchSettingsListRows() } returns listOf(
+			SchedulerSettingsListDbRow("COLLECTION_BATCH", next, "0 * * * *"),
+			SchedulerSettingsListDbRow("RETENTION", null, null),
+		)
+		val previousRun = OffsetDateTime.parse("2026-01-14T08:00:00Z")
+		cache.put(
+			SchedulerCache.Row(
+				jobType = "COLLECTION_BATCH",
+				nextRun = next,
+				cronExpression = "0 * * * *",
+				previousRun = previousRun,
+			),
+		)
+
+		val list = service.getSettingsList().list!!
+
+		assertEquals(2, list.size)
+		assertEquals(SchedulerJobType.COLLECTION_BATCH, list[0].jobType)
+		assertEquals(next, list[0].nextRun)
+		assertEquals("0 * * * *", list[0].cronExpression)
+		assertEquals(previousRun, list[0].previousRun)
+		assertEquals(SchedulerJobType.RETENTION, list[1].jobType)
+		assertNull(list[1].nextRun)
+		assertNull(list[1].cronExpression)
+		assertNull(list[1].previousRun)
 	}
 }

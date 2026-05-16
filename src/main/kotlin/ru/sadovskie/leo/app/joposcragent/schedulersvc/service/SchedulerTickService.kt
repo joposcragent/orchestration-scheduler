@@ -64,6 +64,14 @@ class SchedulerTickService(
 			}
 			return
 		}
+		runScheduledJobActions(jobType, row, now)
+	}
+
+	/**
+	 * Выполняет ветки 4.1 и 4.2 из спецификации тика (Kafka при необходимости + сдвиг next_run),
+	 * без проверки «наступил ли срок» — для принудительного [POST /execute].
+	 */
+	suspend fun runScheduledJobActions(jobType: String, row: SchedulerCache.Row, now: OffsetDateTime) {
 		coroutineScope {
 			launch(Dispatchers.IO) {
 				if (jobType == JobTypeHelper.COLLECTION_BATCH) {

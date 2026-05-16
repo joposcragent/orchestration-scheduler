@@ -1,23 +1,28 @@
 package ru.sadovskie.leo.app.joposcragent.schedulersvc.integration
 
+import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.nullValue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Import
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCacheInitializer
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.kafka.OrchestrationKafkaTopics
 import java.sql.DriverManager
 
@@ -26,6 +31,7 @@ import java.sql.DriverManager
 	webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 	properties = [
 		"scheduler.tick-interval-ms=99999999999",
+		"spring.jackson.default-property-inclusion=always",
 	],
 )
 @AutoConfigureMockMvc
@@ -37,6 +43,18 @@ import java.sql.DriverManager
 class SchedulerIntegrationTest {
 	@Autowired
 	private lateinit var mockMvc: MockMvc
+
+	@Autowired
+	private lateinit var jdbcTemplate: JdbcTemplate
+
+	@Autowired
+	private lateinit var cacheInitializer: SchedulerCacheInitializer
+
+	@BeforeEach
+	fun resetSchedulerTable() {
+		jdbcTemplate.execute("TRUNCATE TABLE orchestration.scheduler")
+		cacheInitializer.reloadFromDatabase()
+	}
 
 	companion object {
 		@Container
@@ -99,6 +117,38 @@ class SchedulerIntegrationTest {
 			.andExpect(jsonPath("$.nextRun").value(nullValue()))
 			.andExpect(jsonPath("$.cronExpression").value(nullValue()))
 			.andExpect(jsonPath("$.previousRun").value(nullValue()))
+	}
+
+	@Test
+	fun `get settings list returns all enum job types`() {
+		mockMvc.perform(
+			get("/settings/list").accept(MediaType.APPLICATION_JSON),
+		)
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.list.length()").value(2))
+			.andExpect(jsonPath("$.list[*].jobType", containsInAnyOrder("COLLECTION_BATCH", "RETENTION")))
+	}
+
+	@Test
+	fun `post execute without cache row returns 400`() {
+		mockMvc.perform(
+			post("/execute").param("jobType", "RETENTION"),
+		)
+			.andExpect(status().isBadRequest)
+	}
+
+	@Test
+	fun `post execute after cron returns ok`() {
+		mockMvc.perform(
+			put("/settings/cron-expression")
+				.accept(MediaType.APPLICATION_JSON)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""{"value":"0 0 * * *"}"""),
+		).andExpect(status().isOk)
+
+		mockMvc.perform(
+			post("/execute").param("jobType", "COLLECTION_BATCH"),
+		).andExpect(status().isOk)
 	}
 
 	@Test

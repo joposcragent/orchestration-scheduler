@@ -1,15 +1,34 @@
 package ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence
 
 import org.jooq.DSLContext
+import org.jooq.Record
+import org.jooq.RecordMapper
 import org.springframework.stereotype.Repository
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.jooq.tables.records.SchedulerRecord
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.jooq.Tables.SCHEDULER
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.jooq.tables.records.SchedulerRecord
 import java.time.OffsetDateTime
+
+private val SETTINGS_LIST_SQL = """
+	SELECT er.job_type::text, s.next_run, s.cron_expression
+	FROM unnest(enum_range(NULL::orchestration.scheduler_jobs)) AS er(job_type)
+	LEFT JOIN orchestration.scheduler s ON er.job_type::text = s.job_type::text
+""".trimIndent()
+
+private val SETTINGS_LIST_MAPPER = RecordMapper<Record, SchedulerSettingsListDbRow> { record ->
+	SchedulerSettingsListDbRow(
+		jobType = record.get(0, String::class.java)!!,
+		nextRun = record.get(1, OffsetDateTime::class.java),
+		cronExpression = record.get(2, String::class.java),
+	)
+}
 
 @Repository
 class SchedulerRepository(
 	private val dsl: DSLContext,
 ) {
+	fun fetchSettingsListRows(): List<SchedulerSettingsListDbRow> =
+		dsl.resultQuery(SETTINGS_LIST_SQL).fetch(SETTINGS_LIST_MAPPER)
+
 	fun findByJobType(jobType: String): SchedulerRecord? =
 		dsl.selectFrom(SCHEDULER).where(SCHEDULER.JOB_TYPE.eq(jobType)).fetchOne()
 

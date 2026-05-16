@@ -8,6 +8,8 @@ import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCacheInitia
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cron.CronNextRunCalculator
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.domain.JobTypeHelper
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettings
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettingsItem
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettingsList
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateCronExpression
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateNextRun
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence.SchedulerRepository
@@ -24,6 +26,19 @@ class SchedulerSettingsService(
 ) {
 	private val log = LoggerFactory.getLogger(javaClass)
 	private val defaultCron = "0 * * * *"
+
+	fun getSettingsList(): SchedulerSettingsList {
+		val rows = repository.fetchSettingsListRows()
+		val items = rows.map { db ->
+			SchedulerSettingsItem(
+				jobType = JobTypeHelper.toOpenApi(db.jobType),
+				nextRun = db.nextRun,
+				cronExpression = db.cronExpression,
+				previousRun = cache.get(db.jobType)?.previousRun,
+			)
+		}
+		return SchedulerSettingsList(list = items)
+	}
 
 	fun getSettings(jobTypeQuery: String?): SchedulerSettings {
 		val code = JobTypeHelper.resolveJobTypeCode(jobTypeQuery)
