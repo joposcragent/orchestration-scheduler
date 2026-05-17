@@ -24,7 +24,7 @@ class SchedulerCacheInitializer(
 			SchedulerCache.Row(
 				jobType = r.jobType,
 				nextRun = r.nextRun,
-				cronExpression = r.cronExpression,
+				interval = r.interval,
 			)
 		}
 		cache.replaceAll(rows)
@@ -46,7 +46,7 @@ class SchedulerCacheInitializer(
 				SchedulerCache.Row(
 					jobType = r.jobType,
 					nextRun = r.nextRun,
-					cronExpression = r.cronExpression,
+					interval = r.interval,
 					previousRun = previousRun,
 				),
 			)

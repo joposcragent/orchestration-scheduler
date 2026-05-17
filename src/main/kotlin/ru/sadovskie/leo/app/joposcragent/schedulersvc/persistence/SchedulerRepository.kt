@@ -18,14 +18,14 @@ class SchedulerRepository(
 	fun fetchSettingsListRows(): List<SchedulerSettingsListDbRow> {
 		val er: Table<Record1<String>> = jobTypesAsValuesTable()
 		val jobTypeField = er.field("job_type", String::class.java)!!
-		return dsl.select(jobTypeField, SCHEDULER.NEXT_RUN, SCHEDULER.CRON_EXPRESSION)
+		return dsl.select(jobTypeField, SCHEDULER.NEXT_RUN, SCHEDULER.INTERVAL)
 			.from(er)
 			.leftJoin(SCHEDULER).on(DSL.cast(SCHEDULER.JOB_TYPE, SQLDataType.VARCHAR).eq(jobTypeField))
 			.fetch { r ->
 				SchedulerSettingsListDbRow(
 					jobType = r.get(jobTypeField)!!,
 					nextRun = r.get(SCHEDULER.NEXT_RUN),
-					cronExpression = r.get(SCHEDULER.CRON_EXPRESSION),
+					interval = r.get(SCHEDULER.INTERVAL),
 				)
 			}
 	}
@@ -41,9 +41,9 @@ class SchedulerRepository(
 	fun findAll(): List<SchedulerRecord> =
 		dsl.selectFrom(SCHEDULER).fetch()
 
-	fun updateCronExpression(jobType: String, cronExpression: String): Int =
+	fun updateInterval(jobType: String, interval: String): Int =
 		dsl.update(SCHEDULER)
-			.set(SCHEDULER.CRON_EXPRESSION, cronExpression)
+			.set(SCHEDULER.INTERVAL, interval)
 			.where(SCHEDULER.JOB_TYPE.eq(jobType))
 			.execute()
 
@@ -53,9 +53,9 @@ class SchedulerRepository(
 			.where(SCHEDULER.JOB_TYPE.eq(jobType))
 			.execute()
 
-	fun insert(jobType: String, cronExpression: String, nextRun: OffsetDateTime) {
-		dsl.insertInto(SCHEDULER, SCHEDULER.JOB_TYPE, SCHEDULER.CRON_EXPRESSION, SCHEDULER.NEXT_RUN)
-			.values(jobType, cronExpression, nextRun)
+	fun insert(jobType: String, interval: String, nextRun: OffsetDateTime) {
+		dsl.insertInto(SCHEDULER, SCHEDULER.JOB_TYPE, SCHEDULER.INTERVAL, SCHEDULER.NEXT_RUN)
+			.values(jobType, interval, nextRun)
 			.execute()
 	}
 }

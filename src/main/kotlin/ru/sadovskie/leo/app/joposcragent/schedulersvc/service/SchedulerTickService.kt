@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCache
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.cron.CronNextRunCalculator
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.domain.IsoDurationParser
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.domain.JobTypeHelper
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.kafka.OrchestrationEnvelopePublisher
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence.SchedulerRepository
@@ -22,7 +22,6 @@ import java.util.UUID
 class SchedulerTickService(
 	private val cache: SchedulerCache,
 	private val repository: SchedulerRepository,
-	private val cronCalculator: CronNextRunCalculator,
 	private val envelopePublisher: OrchestrationEnvelopePublisher,
 	private val clock: Clock,
 ) {
@@ -84,12 +83,13 @@ class SchedulerTickService(
 			}
 			launch(Dispatchers.IO) {
 				try {
-					val newNext = cronCalculator.nextAfter(now, row.cronExpression)
+					val duration = IsoDurationParser.parse(row.interval)
+					val newNext = now.plus(duration)
 					cache.put(
 						SchedulerCache.Row(
 							jobType = jobType,
 							nextRun = newNext,
-							cronExpression = row.cronExpression,
+							interval = row.interval,
 							previousRun = now,
 						),
 					)

@@ -91,7 +91,7 @@ class SchedulerIntegrationTest {
 					uuid            uuid    DEFAULT gen_random_uuid()              NOT NULL,
 					job_type        orchestration.scheduler_jobs                   NOT NULL,
 					next_run        timestamp with time zone                       NOT NULL,
-					cron_expression varchar DEFAULT '0 * * * *'::character varying NOT NULL
+					interval        varchar DEFAULT 'PT1H'::character varying      NOT NULL
 				)
 				""".trimIndent(),
 				"ALTER TABLE orchestration.scheduler ADD CONSTRAINT scheduler_pk PRIMARY KEY (uuid)",
@@ -115,7 +115,7 @@ class SchedulerIntegrationTest {
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.jobType").value("COLLECTION_BATCH"))
 			.andExpect(jsonPath("$.nextRun").value(nullValue()))
-			.andExpect(jsonPath("$.cronExpression").value(nullValue()))
+			.andExpect(jsonPath("$.interval").value(nullValue()))
 			.andExpect(jsonPath("$.previousRun").value(nullValue()))
 	}
 
@@ -138,12 +138,12 @@ class SchedulerIntegrationTest {
 	}
 
 	@Test
-	fun `post execute after cron returns ok`() {
+	fun `post execute after interval returns ok`() {
 		mockMvc.perform(
-			put("/settings/cron-expression")
+			put("/settings/interval")
 				.accept(MediaType.APPLICATION_JSON)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""{"value":"0 0 * * *"}"""),
+				.content("""{"value":"PT1H"}"""),
 		).andExpect(status().isOk)
 
 		mockMvc.perform(
@@ -152,19 +152,19 @@ class SchedulerIntegrationTest {
 	}
 
 	@Test
-	fun `put cron then get`() {
+	fun `put interval then get`() {
 		mockMvc.perform(
-			put("/settings/cron-expression")
+			put("/settings/interval")
 				.accept(MediaType.APPLICATION_JSON)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""{"value":"0 0 * * *"}"""),
+				.content("""{"value":"PT6H"}"""),
 		).andExpect(status().isOk)
 
 		mockMvc.perform(
 			get("/settings").accept(MediaType.APPLICATION_JSON),
 		)
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.cronExpression").value("0 0 * * *"))
+			.andExpect(jsonPath("$.interval").value("PT6H"))
 			.andExpect(jsonPath("$.nextRun").exists())
 			.andExpect(jsonPath("$.previousRun").value(nullValue()))
 	}

@@ -20,7 +20,7 @@ plugins {
 }
 
 group = "ru.sadovskie.leo.app.joposcragent"
-version = "1.3.0-rc.2"
+version = "1.3.0"
 
 jacoco {
 	toolVersion = "0.8.12"
@@ -74,8 +74,6 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("tools.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-	implementation("com.cronutils:cron-utils:9.2.1")
-
 	jooqGenerator("org.postgresql:postgresql")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")

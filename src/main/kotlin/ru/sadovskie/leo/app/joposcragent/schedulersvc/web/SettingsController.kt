@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettings
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettingsItem
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettingsList
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateCronExpression
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateInterval
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateNextRun
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.service.SchedulerExecuteService
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.service.SchedulerSettingsService
@@ -50,7 +50,7 @@ class SettingsController(
 	}
 
 	@GetMapping("/settings", produces = [MediaType.APPLICATION_JSON_VALUE])
-	fun getSettings(@RequestParam(required = false) jobType: String?): SchedulerSettings {
+	fun getSettings(@RequestParam(required = false) jobType: String?): SchedulerSettingsItem {
 		if (log.isDebugEnabled) {
 			log.debug("GET /settings jobTypeQuery={}", jobType)
 		}
@@ -61,21 +61,21 @@ class SettingsController(
 		return settings
 	}
 
-	@PutMapping("/settings/cron-expression")
-	fun putCronExpression(
+	@PutMapping("/settings/interval")
+	fun putInterval(
 		@RequestParam(required = false) jobType: String?,
-		@RequestBody body: UpdateCronExpression,
+		@RequestBody body: UpdateInterval,
 	): ResponseEntity<Void> {
 		if (log.isDebugEnabled) {
 			log.debug(
-				"PUT /settings/cron-expression jobTypeQuery={} body={}",
+				"PUT /settings/interval jobTypeQuery={} body={}",
 				jobType,
 				jsonMapper.writeValueAsString(body),
 			)
 		}
-		settingsService.updateCronExpression(jobType, body)
+		settingsService.updateInterval(jobType, body)
 		if (log.isDebugEnabled) {
-			log.debug("PUT /settings/cron-expression -> 200 OK jobTypeQuery={}", jobType)
+			log.debug("PUT /settings/interval -> 200 OK jobTypeQuery={}", jobType)
 		}
 		return ResponseEntity.ok().build()
 	}

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCache
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.cron.CronNextRunCalculator
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.domain.JobTypeHelper
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.kafka.OrchestrationEnvelopePublisher
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence.SchedulerRepository
@@ -19,14 +18,12 @@ import java.time.ZoneOffset
 class SchedulerTickServiceTest {
 	private val cache = SchedulerCache()
 	private val repository = mockk<SchedulerRepository>(relaxed = true)
-	private val cronCalculator = mockk<CronNextRunCalculator>()
 	private val publisher = mockk<OrchestrationEnvelopePublisher>(relaxed = true)
 	private val clock = Clock.fixed(Instant.parse("2026-01-15T10:00:00Z"), ZoneOffset.UTC)
 
 	private val service = SchedulerTickService(
 		cache = cache,
 		repository = repository,
-		cronCalculator = cronCalculator,
 		envelopePublisher = publisher,
 		clock = clock,
 	)
@@ -44,7 +41,7 @@ class SchedulerTickServiceTest {
 			SchedulerCache.Row(
 				jobType = JobTypeHelper.COLLECTION_BATCH,
 				nextRun = OffsetDateTime.parse("2026-01-15T11:00:00Z"),
-				cronExpression = "0 * * * *",
+				interval = "PT1H",
 			),
 		)
 		service.tick()
@@ -59,11 +56,10 @@ class SchedulerTickServiceTest {
 			SchedulerCache.Row(
 				jobType = JobTypeHelper.RETENTION,
 				nextRun = OffsetDateTime.parse("2026-01-15T09:00:00Z"),
-				cronExpression = "0 * * * *",
+				interval = "PT1H",
 			),
 		)
 		val advanced = OffsetDateTime.parse("2026-01-15T11:00:00Z")
-		every { cronCalculator.nextAfter(any(), "0 * * * *") } returns advanced
 		every { repository.updateNextRun(JobTypeHelper.RETENTION, advanced) } returns 1
 
 		service.tick()
@@ -79,11 +75,10 @@ class SchedulerTickServiceTest {
 			SchedulerCache.Row(
 				jobType = JobTypeHelper.COLLECTION_BATCH,
 				nextRun = OffsetDateTime.parse("2026-01-15T09:00:00Z"),
-				cronExpression = "0 * * * *",
+				interval = "PT1H",
 			),
 		)
 		val advanced = OffsetDateTime.parse("2026-01-15T11:00:00Z")
-		every { cronCalculator.nextAfter(any(), "0 * * * *") } returns advanced
 		every { repository.updateNextRun(JobTypeHelper.COLLECTION_BATCH, advanced) } returns 1
 
 		service.tick()

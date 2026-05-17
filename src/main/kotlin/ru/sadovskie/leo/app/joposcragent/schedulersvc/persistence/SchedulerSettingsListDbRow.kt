@@ -3,10 +3,10 @@ package ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence
 import java.time.OffsetDateTime
 
 /**
- * Строка результата запроса полного списка типов задач с LEFT JOIN к [orchestration.scheduler].
+ * Строка для построения списка настроек: `job_type` из перечисления и опциональные поля из `LEFT JOIN scheduler`.
  */
 data class SchedulerSettingsListDbRow(
 	val jobType: String,
 	val nextRun: OffsetDateTime?,
-	val cronExpression: String?,
+	val interval: String?,
 )

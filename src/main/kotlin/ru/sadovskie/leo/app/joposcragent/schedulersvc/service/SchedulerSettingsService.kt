@@ -5,12 +5,11 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCache
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.cache.SchedulerCacheInitializer
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.cron.CronNextRunCalculator
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.domain.IsoDurationParser
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.domain.JobTypeHelper
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettings
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettingsItem
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.SchedulerSettingsList
-import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateCronExpression
+import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateInterval
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.openapi.model.UpdateNextRun
 import ru.sadovskie.leo.app.joposcragent.schedulersvc.persistence.SchedulerRepository
 import java.time.Clock
@@ -19,13 +18,14 @@ import java.time.OffsetDateTime
 @Service
 class SchedulerSettingsService(
 	private val repository: SchedulerRepository,
-	private val cronCalculator: CronNextRunCalculator,
 	private val cacheInitializer: SchedulerCacheInitializer,
 	private val cache: SchedulerCache,
 	private val clock: Clock,
 ) {
 	private val log = LoggerFactory.getLogger(javaClass)
-	private val defaultCron = "0 * * * *"
+
+	/** Совпадает с default в миграции `scheduler.interval`. */
+	private val defaultInterval = "PT1H"
 
 	fun getSettingsList(): SchedulerSettingsList {
 		val rows = repository.fetchSettingsListRows()
@@ -33,50 +33,50 @@ class SchedulerSettingsService(
 			SchedulerSettingsItem(
 				jobType = JobTypeHelper.toOpenApi(db.jobType),
 				nextRun = db.nextRun,
-				cronExpression = db.cronExpression,
+				interval = db.interval,
 				previousRun = cache.get(db.jobType)?.previousRun,
 			)
 		}
 		return SchedulerSettingsList(list = items)
 	}
 
-	fun getSettings(jobTypeQuery: String?): SchedulerSettings {
+	fun getSettings(jobTypeQuery: String?): SchedulerSettingsItem {
 		val code = JobTypeHelper.resolveJobTypeCode(jobTypeQuery)
 		val row = repository.findByJobType(code)
 		val previousRun = cache.get(code)?.previousRun
 		return if (row == null) {
-			SchedulerSettings(
+			SchedulerSettingsItem(
 				jobType = JobTypeHelper.toOpenApi(code),
 				nextRun = null,
-				cronExpression = null,
+				interval = null,
 				previousRun = previousRun,
 			)
 		} else {
-			SchedulerSettings(
+			SchedulerSettingsItem(
 				jobType = JobTypeHelper.toOpenApi(row.jobType),
 				nextRun = row.nextRun,
-				cronExpression = row.cronExpression,
+				interval = row.interval,
 				previousRun = previousRun,
 			)
 		}
 	}
 
 	@Transactional
-	fun updateCronExpression(jobTypeQuery: String?, body: UpdateCronExpression) {
-		cronCalculator.validate(body.value)
+	fun updateInterval(jobTypeQuery: String?, body: UpdateInterval) {
+		val duration = IsoDurationParser.parse(body.value)
 		val code = JobTypeHelper.resolveJobTypeCode(jobTypeQuery)
 		val now = OffsetDateTime.now(clock)
 		val existing = repository.findByJobType(code)
 		if (existing == null) {
-			val nextRun = cronCalculator.nextAfter(now, body.value)
+			val nextRun = now.plus(duration)
 			repository.insert(code, body.value, nextRun)
-			log.info("updateCronExpression: inserted new row jobType={} nextRun={}", code, nextRun)
+			log.info("updateInterval: inserted new row jobType={} nextRun={}", code, nextRun)
 		} else {
-			repository.updateCronExpression(code, body.value)
-			log.info("updateCronExpression: updated cron jobType={}", code)
+			repository.updateInterval(code, body.value)
+			log.info("updateInterval: updated interval jobType={}", code)
 		}
 		cacheInitializer.refreshJobType(code)
-		log.info("updateCronExpression: cache refreshed jobType={}", code)
+		log.info("updateInterval: cache refreshed jobType={}", code)
 	}
 
 	@Transactional
@@ -84,7 +84,7 @@ class SchedulerSettingsService(
 		val code = JobTypeHelper.resolveJobTypeCode(jobTypeQuery)
 		val existing = repository.findByJobType(code)
 		if (existing == null) {
-			repository.insert(code, defaultCron, body.value)
+			repository.insert(code, defaultInterval, body.value)
 			log.info("updateNextRun: inserted new row jobType={} nextRun={}", code, body.value)
 		} else {
 			repository.updateNextRun(code, body.value)

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS orchestration.scheduler
     uuid            uuid    DEFAULT gen_random_uuid()              NOT NULL,
     job_type        orchestration.scheduler_jobs                   NOT NULL,
     next_run        timestamp with time zone                       NOT NULL,
-    cron_expression varchar DEFAULT '0 * * * *'::character varying NOT NULL
+    interval        varchar DEFAULT 'PT1H'::character varying      NOT NULL
 );
 
 ALTER TABLE orchestration.scheduler

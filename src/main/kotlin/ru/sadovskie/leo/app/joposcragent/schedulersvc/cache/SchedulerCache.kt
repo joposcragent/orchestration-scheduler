@@ -9,7 +9,7 @@ class SchedulerCache {
 	data class Row(
 		val jobType: String,
 		val nextRun: OffsetDateTime,
-		val cronExpression: String,
+		val interval: String,
 		val previousRun: OffsetDateTime? = null,
 	)
 
